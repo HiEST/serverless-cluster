@@ -156,3 +156,10 @@ wget https://storage.googleapis.com/knative-nightly/client/latest/kn-linux-amd64
 mv kn-linux-amd64 kn
 chmod 711 kn
 sudo mv kn /usr/local/bin
+
+# Install Tekton Pipelines
+kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+
+# Install Tekton CLI
+curl -LO https://github.com/tektoncd/cli/releases/download/v0.13.1/tkn_0.13.1_Linux_x86_64.tar.gz
+sudo tar xvzf tkn_0.13.1_Linux_x86_64.tar.gz -C /usr/local/bin/ tkn
