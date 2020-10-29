@@ -1,0 +1,79 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: array-pvc-pipeline
+spec:
+  workspaces:
+    - name: pipeline-ws
+  tasks:
+    - name: write-file
+      taskRef:
+        name: write
+      workspaces:
+        - name: write-ws
+          workspace: pipeline-ws
+    - name: read-file
+      taskRef:
+        name: read
+      workspaces:
+        - name: read-ws
+          workspace: pipeline-ws
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: write
+  annotations:
+    description: |
+      A simple task that writes a file
+spec:
+  workspaces: 
+    - name: write-ws
+      mountPath: /mnt/disk/vol2
+  steps:
+     - name: write
+       image: bash:latest
+       script: |
+         #!/usr/bin/env bash
+         array=( $(seq 1 5000) )
+         printf "%s\n" "${array[@]}" >  $(workspaces.write-ws.path)/file.txt
+         echo "WRITER: written numbers from 1 to 5000 to file.txt"
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: read
+  annotations:
+    description: |
+      A simple task that reads a file
+spec:
+  workspaces: 
+    - name: read-ws
+      mountPath: /mnt/disk/vol2
+  steps:
+     - name: read
+       image: bash:latest
+       script: |
+         #!/usr/bin/env bash
+         readarray -t array < $(workspaces.read-ws.path)/file.txt
+         nums=${#array[@]}
+         dim=$(wc -c $(workspaces.read-ws.path)/file.txt | awk '{print $1}')
+         echo "READER: read file.txt of dimension $dim B containing an array of $nums elements!"
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: array-pvc-pipeline-run-
+spec:
+  pipelineRef:
+    name: array-pvc-pipeline
+  workspaces:
+    - name: pipeline-ws
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi
