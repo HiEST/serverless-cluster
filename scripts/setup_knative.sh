@@ -61,14 +61,12 @@ chmod 700 get_helm.sh
 rm get_helm.sh
 
 # Install Kafka using Helm chart
-helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
+helm repo add incubator https://charts.helm.sh/incubator
 curl https://raw.githubusercontent.com/helm/charts/master/incubator/kafka/values.yaml > values.yaml
 replicas_line_num=$(grep -n -m 1 replicas: values.yaml | sed  's/\([0-9]*\).*/\1/')
 echo "replicas_line_num $replicas_line_num"
 workers=( $(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | sed -n -e '2,4p') )
-echo "workers $workers"
 num_workers=$(echo "${#workers[@]}")
-echo "num_workers $num_workers"
 sed -i ''"${replicas_line_num}"'s/replicas: 3/replicas: '"${num_workers}"'/' values.yaml
 
 if [ $KAFKA_CONF == ephem ]
@@ -106,7 +104,7 @@ fi
 helm install kafka incubator/kafka -n kafka -f values.yaml
 rm values.yaml
 
-# Downlaod the kafka source codde
+# Downlaod the kafka source code
 wget https://ftp.cixug.es/apache/kafka/2.6.0/kafka-2.6.0-src.tgz
 tar -zxvf kafka-2.6.0-src.tgz
 mv kafka-2.6.0-src kafka
@@ -120,7 +118,7 @@ kubectl apply --filename https://github.com/knative/serving/releases/download/v0
 curl -L https://istio.io/downloadIstio | sh -
 sudo mv istio-*/bin/istioctl /usr/local/bin/
 rm -rf istio-*
-istioctl install -y
+istioctl install --set values.global.imagePullPolicy=IfNotPresent -y
 kubectl label namespace default istio-injection=enabled
 cat <<EOF | kubectl apply -f -
 apiVersion: "security.istio.io/v1beta1"
