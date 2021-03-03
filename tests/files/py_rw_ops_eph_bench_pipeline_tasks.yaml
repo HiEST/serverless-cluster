@@ -1,0 +1,59 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: write-read-array-pipeline
+spec:
+  workspaces:
+    - name: pipeline-ws
+  tasks:
+    - name: read-write-task
+      taskRef:
+        name: read-write
+      workspaces:
+        - name: read-write-ws
+          workspace: pipeline-ws
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: read-write
+  annotations:
+    description: |
+      A simple task that reads and writes a file
+spec:
+  workspaces: 
+    - name: read-write-ws
+      mountPath: /data
+  steps:
+     - name: write
+       image: jupyter/scipy-notebook
+       imagePullPolicy: IfNotPresent
+       script: |
+         #!/usr/bin/env python3
+         import numpy as np
+         import time
+         num_vals = temp_val
+         filepath = "/data/array.txt"
+         string = 'x' * num_vals
+         f = open(filepath, 'w')
+         start_time = time.time()
+         f.write("%s" % string)
+         end_time = time.time()
+         f.close()
+         print("WRITER: %s seconds" %(end_time - start_time))
+     - name: read
+       image: jupyter/scipy-notebook
+       imagePullPolicy: IfNotPresent
+       script: |
+         #!/usr/bin/env python3
+         import numpy as np
+         import time
+         import sys
+         filepath = "/data/array.txt"
+         f = open(filepath, "r")
+         start_time = time.time()
+         data = f.read()
+         end_time = time.time()
+         f.close()
+         print("READER: %s seconds" %(end_time - start_time))
+        

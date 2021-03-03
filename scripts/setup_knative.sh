@@ -2,7 +2,7 @@
 function usage(){
     echo "Usage: ./setup_knative.sh -kafka 'channel_conf' [-vol 'dimension']"
     echo "  -kafka  'channel_conf'      specify channel configuration (ephem or pers)"
-    echo "  -vol    'dimension'         specify kafka volumes dimension [B] in persistent configuration"
+    echo "  -vol    'dimension'         specify kafka volumes dimension [GiB] in persistent configuration"
 }
 
 # Check if the kakva configuration is given
@@ -64,7 +64,6 @@ rm get_helm.sh
 helm repo add incubator https://charts.helm.sh/incubator
 curl https://raw.githubusercontent.com/helm/charts/master/incubator/kafka/values.yaml > values.yaml
 replicas_line_num=$(grep -n -m 1 replicas: values.yaml | sed  's/\([0-9]*\).*/\1/')
-echo "replicas_line_num $replicas_line_num"
 workers=( $(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | sed -n -e '2,4p') )
 num_workers=$(echo "${#workers[@]}")
 sed -i ''"${replicas_line_num}"'s/replicas: 3/replicas: '"${num_workers}"'/' values.yaml
@@ -73,9 +72,7 @@ if [ $KAFKA_CONF == ephem ]
 then
     # Setup ephemeral channel configuration
     pers_line_num=$(grep -n -m 1 persistence: values.yaml |sed  's/\([0-9]*\).*/\1/')
-	echo "pers_line_num $pers_line_num"
     enable_line_num=$((pers_line_num+1))
-	echo "enable_line_num $enable_line_num"
     sed -i ''"${enable_line_num}"'s/enabled: true/enabled: false/' values.yaml
 else
     # Setup persistent channel configuration
@@ -105,10 +102,10 @@ helm install kafka incubator/kafka -n kafka -f values.yaml
 rm values.yaml
 
 # Downlaod the kafka source code
-wget https://ftp.cixug.es/apache/kafka/2.6.0/kafka-2.6.0-src.tgz
-tar -zxvf kafka-2.6.0-src.tgz
-mv kafka-2.6.0-src kafka
-rm kafka-2.6.0-src.tgz
+wget https://ftp.cixug.es/apache/kafka/2.7.0/kafka-2.7.0-src.tgz
+tar -zxvf kafka-2.7.0-src.tgz
+mv kafka-2.7.0-src kafka
+rm kafka-2.7.0-src.tgz
 
 # Install Knative Serving component
 kubectl apply --filename https://github.com/knative/serving/releases/download/v0.17.0/serving-crds.yaml
@@ -161,3 +158,4 @@ kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline
 # Install Tekton CLI
 curl -LO https://github.com/tektoncd/cli/releases/download/v0.13.1/tkn_0.13.1_Linux_x86_64.tar.gz
 sudo tar xvzf tkn_0.13.1_Linux_x86_64.tar.gz -C /usr/local/bin/ tkn
+rm -rf tkn_0.13.1_Linux_x86_64.tar.gz
