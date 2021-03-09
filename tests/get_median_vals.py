@@ -1,46 +1,37 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd 
+from statistics import median
 
 NUM_TESTS = 100
 
 LOCAL_VOL = 1
+LOCAL_VOL_FULL = 0
 LOCAL_VOL_RNOBUFF = 0
 LOCAL_VOL_WFLASH = 0
-LOCAL_MEM_VOL = 0
-LOCAL_HPATH = 0
-REMOTE_NFS_VOL = 0
+LOCAL_MEM_VOL = 1
+REMOTE_NFS_VOL = 1
+REMOTE_NFS_VOL_FULL = 0
 REMOTE_NFS_VOL_RNOBUFF = 0
 
 LOG_SCALE = 0
 
-COMPUTE_AVG_TIMES = 0
+COMPUTE_MEDIAN_TIMES = 0
 COMPUTE_THROUGHPUTS = 1
 
 SEPARATE_PLOTS = 1
 
 dims = ["1 KB", 
-        "2 KB",
         "4 KB",
-        "8 KB",
         "16 KB",
-        "32 KB", 
         "64 KB",
-        "128 KB", 
         "256 KB", 
-        "512 KB",
         "1 MB", 
-        "2 MB",
         "4 MB",
-        "8 MB",
         "16 MB",
-        "32 MB", 
         "64 MB",
-        "128 MB", 
         "256 MB", 
-        "512 MB",
         "1 GB",
-        "2 GB"
 ]
 
 num_dims = len(dims)
@@ -56,43 +47,41 @@ def compute_num_bits(dim):
     }
     return switcher.get(d, "ERROR: Dimension %s not allowed!" % d)
 
-def compute_avgs(filename):
-    with open(filename, "r") as rf:
+def compute_median(filename):
+    with open(filename, "r") as f:
         # Read all the times
-        content = rf.readlines()
+        content = f.readlines()
         # Sum up all the times
-        rsum = sum([float(val) for val in rcontent])
-        # Computer average value
-        avg = rsum / NUM_TESTS
-        return avg
+        m = median([float(val) for val in content])
+        return m
 
 def compute_throughput(file, dim):
-    # Get average times 
-    avg_time = compute_avgs(file)
+    # Get median times 
+    median_time = compute_median(file)
     # Get number of input number of bits 
     num_bits = compute_num_bits(dim)
     # Get the throughput in Mbps
-    th = ((num_bits/8)/avg_time)*pow(10,-6)
+    th = ((num_bits/8)/median_time)*pow(10,-6)
     print(th)
     return th
 
 def compute_list(type, op):
     avgs = []
     for it, dim in enumerate(dims):
-        print("---------------- %s ---------------- " % dim)
+        print("---------------- %s %s ---------------- " % (dim, op))
         # Set the filename for the current dimension
-        file = 'times/py_old/' + type + '/' + op + '/' + dim.replace(" ", "") + 'times.txt'
-        # Compute the read average time
-        if COMPUTE_AVG_TIMES:
-            avgs.append(compute_avgs(file))
+        file = 'times/py/' + type + '/' + op + '/' + dim.replace(" ", "") + 'times.txt'
+        # Compute the read median time
+        if COMPUTE_MEDIAN_TIMES:
+            avgs.append(compute_median(file))
         else:
             avgs.append(compute_throughput(file, dim))
     return avgs
 
 def compute_r_w_lists(type):
-    read_avgs = compute_list(type, 'read')
-    write_avgs = compute_list(type, 'write')
-    return read_avgs, write_avgs
+    read_medians = compute_list(type, 'read')
+    write_medians = compute_list(type, 'write')
+    return read_medians, write_medians
 
 def plot_dataframe(type, op, avgs, ax, color):
     # Create the read and write dataframes 
@@ -112,18 +101,20 @@ def plot_dataframe(type, op, avgs, ax, color):
         ax.plot(np.arange(len(df['dim'])), df['avg'], markersize=5, color=color, marker=marker_op, linewidth=1, label=label_op)
     return ax
 
-def plot_dataframes(type, read_avgs, write_avgs, ax, color_r, color_w):
-    ax = plot_dataframe(type, 'read', read_avgs, ax, color_r)
-    ax = plot_dataframe(type, 'write', write_avgs, ax, color_w)
+def plot_dataframes(type, read_medians, write_medians, ax, color_r, color_w):
+    ax = plot_dataframe(type, 'read', read_medians, ax, color_r)
+    ax = plot_dataframe(type, 'write', write_medians, ax, color_w)
     return ax
 
 def construct_out_file_name():
     out_file_name = "plots/"
-    if LOCAL_VOL and LOCAL_MEM_VOL:
+    if LOCAL_VOL and LOCAL_VOL_FULL and LOCAL_VOL_RNOBUFF and LOCAL_VOL_WFLASH and LOCAL_MEM_VOL:
         out_file_name+='locals_'
     else:
         if LOCAL_VOL:
             out_file_name+='localvol_'
+        if LOCAL_VOL_FULL:
+            out_file_name+='localvolfull_'
         if LOCAL_VOL_RNOBUFF:
             out_file_name+='localvolrnobuff_'
         if LOCAL_VOL_WFLASH:
@@ -135,15 +126,17 @@ def construct_out_file_name():
     else:
         if REMOTE_NFS_VOL:
             out_file_name+='remotenfsvol_'
+        if REMOTE_NFS_VOL_FULL:
+            out_file_name+='remotenfsvolfull_'
         if REMOTE_NFS_VOL_RNOBUFF:
             out_file_name+='remotenfsvolrnobuff_'
-    if COMPUTE_AVG_TIMES:
+    if COMPUTE_MEDIAN_TIMES:
         if LOG_SCALE:
-            out_file_name+='times_log'
+            out_file_name+='med_times_log'
         else:
-            out_file_name+='times'
+            out_file_name+='med_times'
     else:
-        out_file_name+='throughputs'
+        out_file_name+='med_throughputs'
     if SEPARATE_PLOTS:
         out_file_name+='_sep'
     out_file_name+='_plot.pdf'
@@ -158,62 +151,82 @@ else:
 if LOCAL_VOL:
     print("LOCAL VOL:")
     # Compute read and write avgs
-    read_avgs, write_avgs = compute_r_w_lists('local_vol')
+    read_medians, write_medians = compute_r_w_lists('local_vol')
     # Plot the read and write avgs
     if SEPARATE_PLOTS:
-        axarr = plot_dataframes('local vol', read_avgs, write_avgs, axarr, 'palevioletred', 'lightpink')
+        axarr = plot_dataframes('local', read_medians, write_medians, axarr, 'palevioletred', 'lightpink')
     else:
-        ax = plot_dataframes('local vol', read_avgs, write_avgs, ax, 'paletvioletred', 'lightpink')
+        ax = plot_dataframes('local', read_medians, write_medians, ax, 'paletvioletred', 'lightpink')
+
+if LOCAL_VOL_FULL:
+    print("LOCAL VOL FULL:")
+    # Compute read and write avgs
+    read_medians, write_medians = compute_r_w_lists('local_vol_full')
+    # Plot the read and write avgs
+    if SEPARATE_PLOTS:
+        axarr = plot_dataframes('local full', read_medians, write_medians, axarr, 'royalblue', 'lightsteelblue')
+    else:
+        ax = plot_dataframes('local full', read_medians, write_medians, ax, 'royalblue', 'lightsteelblue')
 
 if LOCAL_VOL_RNOBUFF:
     print("LOCAL VOL RNOBUFF:")  
     # Compute read avgs
-    read_avgs = compute_list('local_vol_rnobuff', 'read')
+    read_medians = compute_list('local_vol_rnobuff', 'read')
     # Plot the read avgs
     if SEPARATE_PLOTS:
-        axarr = plot_dataframe('local vol rnobuff', 'read', read_avgs, axarr, 'darkseagreen')
+        axarr = plot_dataframe('local rnobuff', 'read', read_medians, axarr, 'darkseagreen')
     else:
-        ax = plot_dataframe('local vol rnobuff', 'read', read_avgs, ax, 'darkseagreen')
+        ax = plot_dataframe('local rnobuff', 'read', read_medians, ax, 'darkseagreen')
 
 if LOCAL_VOL_WFLASH:
     print("LOCAL VOL WFLASH:")  
     # Compute read avgs
-    write_avgs = compute_list('local_vol_wflash', 'write')
+    write_medians = compute_list('local_vol_wflash', 'write')
     # Plot the read avgs
     if SEPARATE_PLOTS:
-        axarr = plot_dataframe('local vol wflash', 'write', write_avgs, axarr, 'lightseagreen')
+        axarr = plot_dataframe('local wflash', 'write', write_medians, axarr, 'lightseagreen')
     else:
-        ax = plot_dataframe('local vol wflash', 'write', write_avgs, ax, 'lightseagreen')
+        ax = plot_dataframe('local wflash', 'write', write_medians, ax, 'lightseagreen')
 
 if LOCAL_MEM_VOL:
     print("LOCAL MEM VOL:")
     # Compute read and write avgs
-    read_avgs, write_avgs = compute_r_w_lists('local_mem')
+    read_medians, write_medians = compute_r_w_lists('local_mem_vol')
     # Plot the read and write avgs
     if SEPARATE_PLOTS:
-        axarr = plot_dataframes('local mem', read_avgs, write_avgs, axarr, 'tan', 'wheat')
+        axarr = plot_dataframes('local mem', read_medians, write_medians, axarr, 'tan', 'wheat')
     else:
-        ax = plot_dataframes('local mem', read_avgs, write_avgs, ax,'tan','wheat')
+        ax = plot_dataframes('local mem', read_medians, write_medians, ax,'tan','wheat')
 
 if REMOTE_NFS_VOL:
     print("REMOTE NFS VOL:")
     # Compute read and write avgs
-    read_avgs, write_avgs = compute_r_w_lists('remote_nfs')
+    read_medians, write_medians = compute_r_w_lists('remote_nfs_vol')
     # Plot the read and write avgs
     if SEPARATE_PLOTS:
-        axarr = plot_dataframes('remote nfs vol', read_avgs, write_avgs, axarr, 'salmon', 'lightsalmon')
+        axarr = plot_dataframes('remote nfs', read_medians, write_medians, axarr, 'salmon', 'lightsalmon')
     else:
-        ax = plot_dataframes('remote nfs vol', read_avgs, write_avgs, ax, 'salmon', 'lightsalmon')
+        ax = plot_dataframes('remote nfs', read_medians, write_medians, ax, 'salmon', 'lightsalmon')
+
+if REMOTE_NFS_VOL_FULL:
+    print("REMOTE NFS FULL VOL:")
+    # Compute read and write avgs
+    read_medians, write_medians = compute_r_w_lists('remote_nfs_vol_full')
+    # Plot the read and write avgs
+    if SEPARATE_PLOTS:
+        axarr = plot_dataframes('remote nfs full', read_medians, write_medians, axarr, 'tan', 'wheat')
+    else:
+        ax = plot_dataframes('remote nfs full', read_medians, write_medians, ax, 'tan', 'wheat')
 
 if REMOTE_NFS_VOL_RNOBUFF:
     print("REMOTE NFS RNOBUFF:")
     # Compute read avgs
-    read_avgs = compute_list('remote_nfs_rnobuff', 'read')
+    read_medians = compute_list('remote_nfs_vol_rnobuff', 'read')
     # Plot the read avgs
     if SEPARATE_PLOTS:
-        axarr = plot_dataframe('remote nfs nobuff', 'read', read_avgs, axarr, 'tab:brown')
+        axarr = plot_dataframe('remote nfs nobuff', 'read', read_medians, axarr, 'tab:brown')
     else:
-        ax = plot_dataframe('remote nfs nobuff', 'read', read_avgs, ax, 'tab:brown')
+        ax = plot_dataframe('remote nfs nobuff', 'read', read_medians, ax, 'tab:brown')
 
 if SEPARATE_PLOTS:
     # Create the read and write plots separately
@@ -231,7 +244,7 @@ else:
         ax.set_yscale('log')
     plt.legend(loc='upper left')
 
-if COMPUTE_AVG_TIMES:
+if COMPUTE_MEDIAN_TIMES:
     # Add y-axis time label 
     if LOG_SCALE:
         fig.text(0.002, 0.5, 'Time [s](log scale)', va='center', rotation='vertical')
