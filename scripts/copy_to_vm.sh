@@ -55,28 +55,28 @@ fi
 
 if [ $NODE_ROLE == master ]
 then 
-    vagrant scp ../cluster_ips.txt :cluster_ips.txt
-    vagrant scp ../scripts/setup_env.sh :setup_env.sh
-    vagrant scp ../scripts/setup_knative.sh :setup_knative.sh
-    vagrant scp ../scripts/setup_ssh.sh :setup_ssh.sh
-    vagrant scp ../samples/knative_hello.yaml :samples/knative_hello.yaml 
-    vagrant scp ../samples/kafka_client.yaml :samples/kafka_client.yaml
-    vagrant scp ../storage_objs/persistentVolume.yaml :storage_objs/persistentVolume.yaml
-    vagrant scp ../storage_objs/storageClass.yaml :storage_objs/storageClass.yaml
+    vagrant scp ../cluster_ips.txt cluster_ips.txt
+    vagrant scp ../scripts/setup_env.sh setup_env.sh
+    vagrant scp ../scripts/setup_knative.sh setup_knative.sh
+    vagrant scp ../scripts/setup_ssh.sh setup_ssh.sh
+    vagrant scp ../samples/knative_hello.yaml samples/knative_hello.yaml 
+    vagrant scp ../samples/kafka_client.yaml samples/kafka_client.yaml
+    vagrant scp ../storage_objs/persistentVolume.yaml storage_objs/persistentVolume.yaml
+    vagrant scp ../storage_objs/storageClass.yaml storage_objs/storageClass.yaml
     if [ $TEST_GIVEN ]
     then
         if [ $TEST_TYPE == local_disk ] 
         then
-            vagrant scp ../storage_objs/persistentVolumeTektonVol.yaml :storage_objs/persistentVolumeTektonVol.yaml
+            vagrant scp ../storage_objs/persistentVolumeTektonVol.yaml storage_objs/persistentVolumeTektonVol.yaml
         elif [ $TEST_TYPE == remote_nfs ]
         then
-            vagrant scp ../storage_objs/persistentVolumeTektonNFS.yaml :storage_objs/persistentVolumeTektonNFS.yaml
+            vagrant scp ../storage_objs/persistentVolumeTektonNFS.yaml storage_objs/persistentVolumeTektonNFS.yaml
         fi
     fi
 elif [ $NODE_ROLE == worker ]
 then
-    vagrant scp ../cluster_ips.txt :cluster_ips.txt
-    vagrant scp ../scripts/setup_env.sh :setup_env.sh
+    vagrant scp ../cluster_ips.txt cluster_ips.txt
+    vagrant scp ../scripts/setup_env.sh setup_env.sh
 else
     echo "ERROR: You have to provide the node type!"
     usage
