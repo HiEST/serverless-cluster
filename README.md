@@ -3,7 +3,7 @@
 The set of scripts configure a cluster of 4 Kubernetes (K8s) nodes: 1 master node (k8s-master) and 3 workers nodes (k8s-worker-node1, k8s-worker-node2, k8s-worker-node3). The current cluster configuration does not allow to run jobs on the master node, it runs only the kubernetes control plane.
 
 The cluster is built on 4 Ubuntu VMs, created with Vagrant, having the following characteristics:
-- master node: 32 GB of memory, 16 CPUs and no storage
+- master node: 32 GB of memory, 16 CPUs and 50GB of storage
 - worker node: 32 GB of memory, 8 CPUs and 50GB of storage
 
 Each cluster node VM is placed on a different physical node, and the VMs IPs have to be set properly accordingly with the specific available network. In the current configuration the IPs used are 10.0.26.205, 10.0.26.206, 10.0.26.207 and 10.0.26.208.<br />
@@ -145,7 +145,12 @@ or, alternatively:
 ```
 $ ./setup_knative.sh -kafka pers -vol 'dimension'
 ```
-where 'dimension' is the dimension of the volume attached to each Kafka broker. Pay attention that this dimension should never exceed the total storage available in the corresponding VM.
+where 'dimension' is the dimension in GB of the volume attached to each Kafka broker. Pay attention that this dimension should never exceed the total storage available in the corresponding VM.
+
+To finalize the Knative setup, reload the .bashrc settings:
+```
+source ~/.bashrc
+```
 
 For the persistent configuration, check that the following pods have been deployed:
 ```
