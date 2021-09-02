@@ -55,10 +55,11 @@ fi
 kubectl create namespace kafka
 
 # Install Helm k8s packet manager
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-chmod 700 get_helm.sh
-./get_helm.sh
-rm get_helm.sh
+wget https://get.helm.sh/helm-v3.3.4-linux-amd64.tar.gz
+tar -zxvf helm-v3.3.4-linux-amd64.tar.gz
+rm -rf helm-v3.3.4-linux-amd64.tar.gz
+sudo mv linux-amd64/helm /usr/local/bin/helm 
+rm -rf linux-amd64
 
 # Install Kafka using Helm chart
 helm repo add incubator https://charts.helm.sh/incubator
@@ -102,40 +103,42 @@ helm install kafka incubator/kafka -n kafka -f values.yaml
 rm values.yaml
 
 # Downlaod the kafka source code
-wget https://ftp.cixug.es/apache/kafka/2.7.0/kafka-2.7.0-src.tgz
-tar -zxvf kafka-2.7.0-src.tgz
-mv kafka-2.7.0-src kafka
-rm kafka-2.7.0-src.tgz
+#wget https://ftp.cixug.es/apache/kafka/2.7.0/kafka-2.7.0-src.tgz
+#tar -zxvf kafka-2.7.0-src.tgz
+#mv kafka-2.7.0-src kafka
+#rm kafka-2.7.0-src.tgz
 
 # Install Knative Serving component
-kubectl apply --filename https://github.com/knative/serving/releases/download/v0.17.0/serving-crds.yaml
-kubectl apply --filename https://github.com/knative/serving/releases/download/v0.17.0/serving-core.yaml
+kubectl apply --filename https://github.com/knative/serving/releases/download/v0.18.0/serving-crds.yaml
+kubectl apply --filename https://github.com/knative/serving/releases/download/v0.18.0/serving-core.yaml
 
-# Downlod and install Istio
-curl -L https://istio.io/downloadIstio | sh -
-sudo mv istio-*/bin/istioctl /usr/local/bin/
-rm -rf istio-*
+# Download, install and configure Istio (default configuration profile)
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.7.3 sh -
+sudo mv istio-1.7.3/bin/istioctl /usr/local/bin/
+rm -rf istio-1.7.3
 istioctl install --set values.global.imagePullPolicy=IfNotPresent -y
 kubectl label namespace default istio-injection=enabled
 cat <<EOF | kubectl apply -f -
 apiVersion: "security.istio.io/v1beta1"
 kind: "PeerAuthentication"
 metadata:
-	name: "default"
-	namespace: "knative-serving"
+  name: "default"
+  namespace: "knative-serving"
 spec:
-	mtls:
-		mode: PERMISSIVE
+  mtls:
+    mode: PERMISSIVE
 EOF
-# Configure DNS for Istio
+
+# Install Knative KIngress controller for Istio
 kubectl apply --filename https://github.com/knative/net-istio/releases/download/v0.18.0/release.yaml
-# Set node ports 
+
+# Set service's node ports to access the gateway (no external load balancer)
 INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}')
 echo "export INGRESS_PORT=$INGRESS_PORT" >> ~/.bashrc 
 SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
 echo "export SECURE_INGRESS_PORT=$SECURE_INGRESS_PORT" >> ~/.bashrc 
-TCP_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="tcp")].nodePort}')
-echo "export TCP_INGRESS_PORT=$TCP_INGRESS_PORT" >> ~/.bashrc 
+#TCP_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="tcp")].nodePort}')
+#echo "export TCP_INGRESS_PORT=$TCP_INGRESS_PORT" >> ~/.bashrc 
 INGRESS_HOST=$(kubectl get po -l istio=ingressgateway -n istio-system -o jsonpath='{.items[0].status.hostIP}')
 echo "export INGRESS_HOST=$INGRESS_HOST" >> ~/.bashrc 
 GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT

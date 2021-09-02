@@ -23,6 +23,7 @@ The K8s serverless cluster has been created with:
 * Knative eventing version: 0.18.0
 * Helm version: 3.3.4
 * Istio version: 1.7.3
+* Tekton version: 0.13.1
 
 ## Setup
 To obtain your serverless K8s cluster perform the following steps:
