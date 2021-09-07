@@ -19,11 +19,11 @@ The hostnames and the related IPs have to be summerized in the cluster_ips.txt f
 The K8s serverless cluster has been created with:
 * Docker version: 19.03.11 
 * Kubernetes version: 1.19.3
-* Knative serving version: 0.18.0
-* Knative eventing version: 0.18.0
+* Knative serving version: 0.25.0
+* Knative eventing version: 0.25.0
 * Helm version: 3.3.4
-* Istio version: 1.7.3
-* Tekton version: 0.13.1
+* Istio version: 1.11.0
+* Tekton version: 0.27.3
 
 ## Setup
 To obtain your serverless K8s cluster perform the following steps:

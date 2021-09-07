@@ -61,7 +61,10 @@ then
     vagrant scp ../scripts/setup_ssh.sh setup_ssh.sh
     vagrant scp ../samples/knative_hello.yaml samples/knative_hello.yaml 
     vagrant scp ../samples/kafka_client.yaml samples/kafka_client.yaml
+    vagrant scp ../samples/tekton_sum_and_multiply.yaml samples/tekton_sum_and_multiply.yaml
+    vagrant scp ../samples/tekton_array_with_workspace.yaml samples/tekton_array_with_workspace.yaml
     vagrant scp ../storage_objs/persistentVolume.yaml storage_objs/persistentVolume.yaml
+    vagrant scp ../storage_objs/persistentVolumeTekton.yaml storage_objs/persistentVolumeTekton.yaml
     vagrant scp ../storage_objs/storageClass.yaml storage_objs/storageClass.yaml
     if [ $TEST_GIVEN ]
     then

@@ -102,20 +102,14 @@ fi
 helm install kafka incubator/kafka -n kafka -f values.yaml
 rm values.yaml
 
-# Downlaod the kafka source code
-#wget https://ftp.cixug.es/apache/kafka/2.7.0/kafka-2.7.0-src.tgz
-#tar -zxvf kafka-2.7.0-src.tgz
-#mv kafka-2.7.0-src kafka
-#rm kafka-2.7.0-src.tgz
-
 # Install Knative Serving component
-kubectl apply --filename https://github.com/knative/serving/releases/download/v0.18.0/serving-crds.yaml
-kubectl apply --filename https://github.com/knative/serving/releases/download/v0.18.0/serving-core.yaml
+kubectl apply --filename https://github.com/knative/serving/releases/download/v0.25.0/serving-crds.yaml
+kubectl apply --filename https://github.com/knative/serving/releases/download/v0.25.0/serving-core.yaml
 
 # Download, install and configure Istio (default configuration profile)
-curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.7.3 sh -
-sudo mv istio-1.7.3/bin/istioctl /usr/local/bin/
-rm -rf istio-1.7.3
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.11.0 sh -
+sudo mv istio-1.11.0/bin/istioctl /usr/local/bin/
+rm -rf istio-1.11.0
 istioctl install --set values.global.imagePullPolicy=IfNotPresent -y
 kubectl label namespace default istio-injection=enabled
 cat <<EOF | kubectl apply -f -
@@ -130,24 +124,21 @@ spec:
 EOF
 
 # Install Knative KIngress controller for Istio
-kubectl apply --filename https://github.com/knative/net-istio/releases/download/v0.18.0/release.yaml
+kubectl apply --filename https://github.com/knative/net-istio/releases/download/v0.25.0/release.yaml
 
 # Set service's node ports to access the gateway (no external load balancer)
 INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}')
 echo "export INGRESS_PORT=$INGRESS_PORT" >> ~/.bashrc 
 SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
 echo "export SECURE_INGRESS_PORT=$SECURE_INGRESS_PORT" >> ~/.bashrc 
-#TCP_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="tcp")].nodePort}')
-#echo "export TCP_INGRESS_PORT=$TCP_INGRESS_PORT" >> ~/.bashrc 
 INGRESS_HOST=$(kubectl get po -l istio=ingressgateway -n istio-system -o jsonpath='{.items[0].status.hostIP}')
 echo "export INGRESS_HOST=$INGRESS_HOST" >> ~/.bashrc 
 GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
 echo "export GATEWAY_URL=$GATEWAY_URL" >> ~/.bashrc
-source ~/.bashrc
 
 # Install Knative Eventing component
-kubectl apply --filename https://github.com/knative/eventing/releases/download/v0.18.0/eventing-crds.yaml
-kubectl apply --filename https://github.com/knative/eventing/releases/download/v0.18.0/eventing-core.yaml
+kubectl apply --filename https://github.com/knative/eventing/releases/download/v0.25.0/eventing-crds.yaml
+kubectl apply --filename https://github.com/knative/eventing/releases/download/v0.25.0/eventing-core.yaml
 
 # Istall Knative CLI
 wget https://storage.googleapis.com/knative-nightly/client/latest/kn-linux-amd64
@@ -156,9 +147,10 @@ chmod 711 kn
 sudo mv kn /usr/local/bin
 
 # Install Tekton Pipelines
-kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.27.3/release.yaml
 
 # Install Tekton CLI
-curl -LO https://github.com/tektoncd/cli/releases/download/v0.13.1/tkn_0.13.1_Linux_x86_64.tar.gz
-sudo tar xvzf tkn_0.13.1_Linux_x86_64.tar.gz -C /usr/local/bin/ tkn
-rm -rf tkn_0.13.1_Linux_x86_64.tar.gz
+curl -LO https://github.com/tektoncd/cli/releases/download/v0.20.0/tkn_0.20.0_Linux_x86_64.tar.gz
+sudo tar xvzf tkn_0.20.0_Linux_x86_64.tar.gz -C /usr/local/bin/ tkn
+rm -rf tkn_0.20.0_Linux_x86_64.tar.gz
+rm -rf tkn_0.20.0_Linux_x86_64
