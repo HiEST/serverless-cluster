@@ -1,0 +1,83 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: write-read-array-pipeline
+spec:
+  workspaces:
+    - name: pipeline-ws
+  tasks:
+    - name: write-task
+      taskRef:
+        name: write
+      workspaces:
+        - name: write-ws
+          workspace: pipeline-ws
+    - name: read-task
+      taskRef:
+        name: read
+      runAfter:
+        - write-task
+      workspaces:
+        - name: read-ws
+          workspace: pipeline-ws
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: write
+  annotations:
+    description: |
+      A simple task that writes a file
+spec:
+  workspaces: 
+    - name: write-ws
+      mountPath: /data
+  steps:
+     - name: write
+       image: jupyter/scipy-notebook
+       imagePullPolicy: IfNotPresent
+       script: |
+         #!/usr/bin/env python3
+         import numpy as np
+         import time
+         num_vals = 1024
+         string = 'x' * num_vals
+         for n in range(100):
+                filepath = "/data/benchmark/array" + str(n) + ".txt"
+                start_time = time.time()
+                f = open(filepath, 'w')
+                f.write("%s" % string)
+                f.close()
+                end_time = time.time()
+                print("WRITER: %s seconds" %(end_time - start_time))
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: read
+  annotations:
+    description: |
+      A simple task that reads a file
+spec:
+  workspaces: 
+    - name: read-ws
+      mountPath: /data
+  steps:
+     - name: read
+       image: jupyter/scipy-notebook
+       imagePullPolicy: IfNotPresent
+       script: |
+         #!/usr/bin/env python3
+         import numpy as np
+         import time
+         import sys
+         for n in range(100):
+                filepath = "/data/benchmark/array" + str(n) + ".txt"
+                start_time = time.time()
+                f = open(filepath, "r")
+                data = f.read()
+                f.close()
+                end_time = time.time()
+                print("READER: %s seconds" %(end_time - start_time))
+        
