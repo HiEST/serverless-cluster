@@ -41,10 +41,10 @@ spec:
                          content = fc.read()
                  fc.close()
          filepath = "/data/array.txt"
-         f = open(filepath, "r")
          start_time = time.time()
+         f = open(filepath, "r")
          data = f.read()
-         end_time = time.time()
          f.close()
+         end_time = time.time()
          print("READER: %s seconds" %(end_time - start_time))
         
