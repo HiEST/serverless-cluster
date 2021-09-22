@@ -82,14 +82,14 @@ address $IP
 EOT
 
 # Install OpenSSH-Server and modify config file
-apt-get install openssh-server
+apt-get install -y openssh-server
 if [[ $NODE_TYPE == worker ]]
 then
     sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
     systemctl restart sshd
 else
-    apt-get install sshpass
+    apt-get install -y sshpass
 fi
 
 # Update repository
@@ -132,7 +132,7 @@ EOF
 apt-get update
 
 # Install kubeadm, Kubelet And Kubectl 
-apt-get install -y kubelet kubeadm kubectl
+apt-get install -y kubelet=1.19.3-00 kubeadm=1.19.3-00 kubectl=1.19.3-00
 apt-mark hold kubelet kubeadm kubectl
 
 if [[ $NODE_TYPE == master ]]

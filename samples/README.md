@@ -107,6 +107,7 @@ The pipeline is composed of three stages. In the first stage the sum and multipl
 From the samples directory, to create the sample pipeline run the following command:
 ```
 $ kubectl create -f tekton_sum_and_multiply.yaml
+pipeline.tekton.dev/sum-and-multiply-pipeline created
 task.tekton.dev/sum created
 task.tekton.dev/multiply created 
 pipelinerun.tekton.dev/sum-and-multiply-pipeline-run-56g47 created

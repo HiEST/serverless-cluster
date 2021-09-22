@@ -7,3 +7,7 @@
 
 ### Vagrant Patch ###
 *.box
+
+### Plots ###
+tests/plots/*
+!tests/plots/.gitkeep

@@ -2,7 +2,7 @@
 function usage(){
     echo "Usage: ./setup_knative.sh -kafka 'channel_conf' [-vol 'dimension']"
     echo "  -kafka  'channel_conf'      specify channel configuration (ephem or pers)"
-    echo "  -vol    'dimension'         specify kafka volumes dimension [B] in persistent configuration"
+    echo "  -vol    'dimension'         specify kafka volumes dimension [GiB] in persistent configuration"
 }
 
 # Check if the kakva configuration is given
@@ -55,16 +55,16 @@ fi
 kubectl create namespace kafka
 
 # Install Helm k8s packet manager
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-chmod 700 get_helm.sh
-./get_helm.sh
-rm get_helm.sh
+wget https://get.helm.sh/helm-v3.3.4-linux-amd64.tar.gz
+tar -zxvf helm-v3.3.4-linux-amd64.tar.gz
+rm -rf helm-v3.3.4-linux-amd64.tar.gz
+sudo mv linux-amd64/helm /usr/local/bin/helm 
+rm -rf linux-amd64
 
 # Install Kafka using Helm chart
 helm repo add incubator https://charts.helm.sh/incubator
 curl https://raw.githubusercontent.com/helm/charts/master/incubator/kafka/values.yaml > values.yaml
 replicas_line_num=$(grep -n -m 1 replicas: values.yaml | sed  's/\([0-9]*\).*/\1/')
-echo "replicas_line_num $replicas_line_num"
 workers=( $(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | sed -n -e '2,4p') )
 num_workers=$(echo "${#workers[@]}")
 sed -i ''"${replicas_line_num}"'s/replicas: 3/replicas: '"${num_workers}"'/' values.yaml
@@ -73,9 +73,7 @@ if [ $KAFKA_CONF == ephem ]
 then
     # Setup ephemeral channel configuration
     pers_line_num=$(grep -n -m 1 persistence: values.yaml |sed  's/\([0-9]*\).*/\1/')
-	echo "pers_line_num $pers_line_num"
     enable_line_num=$((pers_line_num+1))
-	echo "enable_line_num $enable_line_num"
     sed -i ''"${enable_line_num}"'s/enabled: true/enabled: false/' values.yaml
 else
     # Setup persistent channel configuration
@@ -104,50 +102,43 @@ fi
 helm install kafka incubator/kafka -n kafka -f values.yaml
 rm values.yaml
 
-# Downlaod the kafka source code
-wget https://ftp.cixug.es/apache/kafka/2.6.0/kafka-2.6.0-src.tgz
-tar -zxvf kafka-2.6.0-src.tgz
-mv kafka-2.6.0-src kafka
-rm kafka-2.6.0-src.tgz
-
 # Install Knative Serving component
-kubectl apply --filename https://github.com/knative/serving/releases/download/v0.17.0/serving-crds.yaml
-kubectl apply --filename https://github.com/knative/serving/releases/download/v0.17.0/serving-core.yaml
+kubectl apply --filename https://github.com/knative/serving/releases/download/v0.25.0/serving-crds.yaml
+kubectl apply --filename https://github.com/knative/serving/releases/download/v0.25.0/serving-core.yaml
 
-# Downlod and install Istio
-curl -L https://istio.io/downloadIstio | sh -
-sudo mv istio-*/bin/istioctl /usr/local/bin/
-rm -rf istio-*
+# Download, install and configure Istio (default configuration profile)
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.11.0 sh -
+sudo mv istio-1.11.0/bin/istioctl /usr/local/bin/
+rm -rf istio-1.11.0
 istioctl install --set values.global.imagePullPolicy=IfNotPresent -y
 kubectl label namespace default istio-injection=enabled
 cat <<EOF | kubectl apply -f -
 apiVersion: "security.istio.io/v1beta1"
 kind: "PeerAuthentication"
 metadata:
-	name: "default"
-	namespace: "knative-serving"
+  name: "default"
+  namespace: "knative-serving"
 spec:
-	mtls:
-		mode: PERMISSIVE
+  mtls:
+    mode: PERMISSIVE
 EOF
-# Configure DNS for Istio
-kubectl apply --filename https://github.com/knative/net-istio/releases/download/v0.18.0/release.yaml
-# Set node ports 
+
+# Install Knative KIngress controller for Istio
+kubectl apply --filename https://github.com/knative/net-istio/releases/download/v0.25.0/release.yaml
+
+# Set service's node ports to access the gateway (no external load balancer)
 INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}')
 echo "export INGRESS_PORT=$INGRESS_PORT" >> ~/.bashrc 
 SECURE_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}')
 echo "export SECURE_INGRESS_PORT=$SECURE_INGRESS_PORT" >> ~/.bashrc 
-TCP_INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="tcp")].nodePort}')
-echo "export TCP_INGRESS_PORT=$TCP_INGRESS_PORT" >> ~/.bashrc 
 INGRESS_HOST=$(kubectl get po -l istio=ingressgateway -n istio-system -o jsonpath='{.items[0].status.hostIP}')
 echo "export INGRESS_HOST=$INGRESS_HOST" >> ~/.bashrc 
 GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
 echo "export GATEWAY_URL=$GATEWAY_URL" >> ~/.bashrc
-source ~/.bashrc
 
 # Install Knative Eventing component
-kubectl apply --filename https://github.com/knative/eventing/releases/download/v0.18.0/eventing-crds.yaml
-kubectl apply --filename https://github.com/knative/eventing/releases/download/v0.18.0/eventing-core.yaml
+kubectl apply --filename https://github.com/knative/eventing/releases/download/v0.25.0/eventing-crds.yaml
+kubectl apply --filename https://github.com/knative/eventing/releases/download/v0.25.0/eventing-core.yaml
 
 # Istall Knative CLI
 wget https://storage.googleapis.com/knative-nightly/client/latest/kn-linux-amd64
@@ -156,8 +147,10 @@ chmod 711 kn
 sudo mv kn /usr/local/bin
 
 # Install Tekton Pipelines
-kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.27.3/release.yaml
 
 # Install Tekton CLI
-curl -LO https://github.com/tektoncd/cli/releases/download/v0.13.1/tkn_0.13.1_Linux_x86_64.tar.gz
-sudo tar xvzf tkn_0.13.1_Linux_x86_64.tar.gz -C /usr/local/bin/ tkn
+curl -LO https://github.com/tektoncd/cli/releases/download/v0.20.0/tkn_0.20.0_Linux_x86_64.tar.gz
+sudo tar xvzf tkn_0.20.0_Linux_x86_64.tar.gz -C /usr/local/bin/ tkn
+rm -rf tkn_0.20.0_Linux_x86_64.tar.gz
+rm -rf tkn_0.20.0_Linux_x86_64

@@ -50,8 +50,8 @@ spec:
          import sys
          filepath = "/data/array.txt"
          start_time = time.time()
-         file = open(filepath, "r")
-         data = file.read()
+         with open(filepath, 'r') as f:
+            data = f.read()
          end_time = time.time()
          print("READER: %s seconds" %(end_time - start_time))
         

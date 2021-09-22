@@ -9,7 +9,7 @@ LOCAL_VOL_FULL=0
 LOCAL_VOL_FULL_MOPS=0
 LOCAL_RNOBUFF=0
 REMOTE_NFS_FULL=0
-REMOTE_NFS_FULL_SAME_NODE=0
+REMOTE_NFS_FULL_SAMENODE=0
 REMOTE_NFS_FULL_MOPS=0
 REMOTE_NFS_RNOBUFF=0
 
@@ -38,7 +38,8 @@ compute_num_bytes(){
 	stringarray=( $1 )
 	val=${stringarray[0]}
 	dim=${stringarray[1]}
-	case "$dim" in
+    # Return the actual number of bytes
+    case "$dim" in
 		"B") num_bytes=$val
 		;;
 		"KB") num_bytes=$(($val*1024))
@@ -54,12 +55,12 @@ compute_num_bytes(){
 }
 
 # Check if a configuration is given
-if [ $((LOCAL_MEM + LOCAL_VOL_FULL + LOCAL_VOL_FULL_MOPS + LOCAL_RNOBUFF + REMOTE_NFS_FULL + REMOTE_NFS_FULL_SAME_NODE + REMOTE_NFS_FULL_MOPS + REMOTE_NFS_RNOBUFF )) -eq 0 ]
+if [ $((LOCAL_MEM + LOCAL_VOL_FULL + LOCAL_VOL_FULL_MOPS + LOCAL_RNOBUFF + REMOTE_NFS_FULL + REMOTE_NFS_FULL_SAMENODE + REMOTE_NFS_FULL_MOPS + REMOTE_NFS_RNOBUFF )) -eq 0 ]
 then 
     echo "ERROR: You have to provide a configuration to benchmark!"
     exit 1
 
-elif [ $((LOCAL_MEM + LOCAL_VOL_FULL + LOCAL_VOL_FULL_MOPS + LOCAL_RNOBUFF + REMOTE_NFS_FULL + REMOTE_NFS_FULL_SAME_NODE + REMOTE_NFS_FULL_MOPS + REMOTE_NFS_RNOBUFF )) -gt 1 ]
+elif [ $((LOCAL_MEM + LOCAL_VOL_FULL + LOCAL_VOL_FULL_MOPS + LOCAL_RNOBUFF + REMOTE_NFS_FULL + REMOTE_NFS_FULL_SAMENODE + REMOTE_NFS_FULL_MOPS + REMOTE_NFS_RNOBUFF )) -gt 1 ]
 then
 	echo "ERROR: You can run one configuration tests per time!"
 	exit 1
@@ -95,7 +96,7 @@ then
 	pipeline_yaml_path="files/py_rw_ops_full_bench_pipeline_tasks.yaml"
 	rtimes_folder="times/py/remote_nfs_vol_full/read/"
 	wtimes_folder="times/py/remote_nfs_vol_full/write/"
-elif [[ $REMOTE_NFS_FULL_SAME_NODE = 1 ]]
+elif [[ $REMOTE_NFS_FULL_SAMENODE = 1 ]]
 then
 	pipeline_yaml_path="files/py_rw_ops_full_bench_pipeline_tasks.yaml"
 	rtimes_folder="times/py/remote_nfs_vol_full_samenode/read/"
@@ -126,13 +127,13 @@ elif [[ $LOCAL_VOL_FULL == 1 || $LOCAL_VOL_FULL_MOPS == 1 || $LOCAL_RNOBUFF == 1
 then	
 	pv_yaml="../storage_objs/persistentVolumeTektonVol.yaml"
 	plr_yaml="files/pipelinerun.yaml"
-elif [[ $REMOTE_NFS_FULL == 1 ||  $REMOTE_NFS_FULL_SAME_NODE = 1 || $REMOTE_NFS_FULL_MOPS == 1 || $REMOTE_NFS_RNOBUFF == 1 ]]
+elif [[ $REMOTE_NFS_FULL == 1 || $REMOTE_NFS_FULL_SAMENODE == 1 || $REMOTE_NFS_FULL_MOPS == 1 || $REMOTE_NFS_RNOBUFF == 1 ]]
 then
 	pv_yaml="../storage_objs/persistentVolumeTektonNFS.yaml"
 	if [[ $REMOTE_NFS_RNOBUFF == 1 ]]
 	then
 		plr_yaml="files/pipelinerunNFSrnobuff.yaml"	
-	elif [[ $REMOTE_NFS_FULL_SAME_NODE = 1 ]]
+	elif [[ $REMOTE_NFS_FULL_SAMENODE == 1 ]]
 	then
 		plr_yaml="files/pipelinerunNFSSameNode.yaml"
 	else
@@ -163,7 +164,7 @@ for i in "${dims[@]}"; do
 	elif [[ $REMOTE_NFS_RNOBUFF == 1 ]]
 	then 
 		echo "**************************** REMOTE NFS NOCACHE BUFF BENCHMARK ON $i *******************************"
-	elif [[ $REMOTE_NFS_FULL_SAME_NODE == 1 ]]
+	elif [[ $REMOTE_NFS_FULL_SAMENODE == 1 ]]
 	then
 		echo "**************************** REMOTE NFS FULL SAMENODE BENCHMARK ON $i *******************************"
 	fi
@@ -231,10 +232,17 @@ for i in "${dims[@]}"; do
 		# Deploy the pipelinerun
 		out=$(kubectl create -f $plr_yaml 2> /dev/null | tee >(cat - >&5))
 		prun_obj=( $(echo "$out" | cut -d "/" -f2- | awk '{print $1}'))
+        # Wait for the pipeline to start
+        array=($out)
+        while [ ${#array[@]} -lt 8 ]
+        do
+            out=$(kubectl get pipelineruns 2> /dev/null)
+            array=($out)
+        done
 		# Read the pipelinerun logs to extract the read and write throughput
+		echo "Pipeline is still running.."
 		out=$(kubectl get pipelineruns 2> /dev/null)
 		set -- $out
-		echo "Pipeline is still running.."
 		while [ $7 != 'True' -a $8 != 'Succeded' ]; do
 			if [ $8 == 'False' ]
 		       	then
