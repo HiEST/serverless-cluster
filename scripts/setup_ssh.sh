@@ -15,4 +15,6 @@ do
     sshpass -p root ssh-copy-id -i /root/.ssh/id_rsa.pub -o StrictHostKeyChecking=no root@$ip
 done
 
+# Copy the public key to nfs server
+sshpass -p root ssh-copy-id -i /root/.ssh/id_rsa.pub -o StrictHostKeyChecking=no root@10.0.26.204
 

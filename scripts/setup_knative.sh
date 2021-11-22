@@ -147,10 +147,10 @@ chmod 711 kn
 sudo mv kn /usr/local/bin
 
 # Install Tekton Pipelines
-kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.27.3/release.yaml
+kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.29.0/release.yaml
 
 # Install Tekton CLI
-curl -LO https://github.com/tektoncd/cli/releases/download/v0.20.0/tkn_0.20.0_Linux_x86_64.tar.gz
-sudo tar xvzf tkn_0.20.0_Linux_x86_64.tar.gz -C /usr/local/bin/ tkn
-rm -rf tkn_0.20.0_Linux_x86_64.tar.gz
-rm -rf tkn_0.20.0_Linux_x86_64
+curl -LO https://github.com/tektoncd/cli/releases/download/v0.21.0/tkn_0.21.0_Linux_x86_64.tar.gz
+sudo tar xvzf tkn_0.21.0_Linux_x86_64.tar.gz -C /usr/local/bin/ tkn
+rm -rf tkn_0.21.0_Linux_x86_64.tar.gz
+rm -rf tkn_0.21.0_Linux_x86_64

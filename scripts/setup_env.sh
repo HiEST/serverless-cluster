@@ -121,6 +121,9 @@ systemctl enable docker
 # Update repository
 apt-get update
 
+# Setup NFS
+apt-get install nfs-common
+
 # Set up Kubernetes environment
 apt-get install -y apt-transport-https curl
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -

@@ -2,7 +2,7 @@
 
 function usage(){
     echo "Usage: ./copy_scripts.sh -role 'node_role' [-test 'test_type']"
-    echo "  -role  'node_role'      specify the node role (master or worker)"
+    echo "  -role  'node_role'      specify the node role (master, worker or nfsserver)"
     echo "  -test  'test_type'      specify the test type (local_mem, local_disk or remote_nfs)"
 }
 
@@ -18,7 +18,7 @@ else
         key=$1
         case $key in
             -role) NODE_ROLE=$2
-                if [ $NODE_ROLE != master -a $NODE_ROLE != worker ]
+                if [ $NODE_ROLE != master -a $NODE_ROLE != worker -a $NODE_ROLE != nfsserver]
                 then
                     echo "ERROR: illegal argument for key -role!"
                     usage
@@ -53,9 +53,19 @@ then
     exit 1
 fi
 
+# Vim configuration
+vagrant scp $HOME/.vimrc .vimrc
+vagrant scp $HOME/.vim .vim
+
+# Git repo private key
+vagrant scp $HOME/.ssh/id_rsa_git id_rsa_git
+
+# Cluster IPs
+vagrant scp ../cluster_ips.txt cluster_ips.txt
+
 if [ $NODE_ROLE == master ]
-then 
-    vagrant scp ../cluster_ips.txt cluster_ips.txt
+then
+    # Cluster files
     vagrant scp ../scripts/setup_env.sh setup_env.sh
     vagrant scp ../scripts/setup_knative.sh setup_knative.sh
     vagrant scp ../scripts/setup_ssh.sh setup_ssh.sh
@@ -70,7 +80,7 @@ then
     then
         if [ $TEST_TYPE == local_disk ] 
         then
-            vagrant scp ../storage_objs/persistentVolumeTektonVol.yaml storage_objs/persistentVolumeTektonVol.yaml
+            vagrant scp ../storage_objs/persistentVolumeTektonVol.yaml storage_objs/pv.yaml
         elif [ $TEST_TYPE == remote_nfs ]
         then
             vagrant scp ../storage_objs/persistentVolumeTektonNFS.yaml storage_objs/persistentVolumeTektonNFS.yaml
@@ -78,8 +88,9 @@ then
     fi
 elif [ $NODE_ROLE == worker ]
 then
-    vagrant scp ../cluster_ips.txt cluster_ips.txt
     vagrant scp ../scripts/setup_env.sh setup_env.sh
+elif [ $NODE_ROLE == nfsserver ]
+    vagrant scp ../scripts/setup_nfs_server.sh setup_nfs_server.sh
 else
     echo "ERROR: You have to provide the node type!"
     usage
