@@ -19,7 +19,7 @@ Vagrant.configure("2") do |config|
   end
 
   # Add diskspace
-  config.disksize.size = "50GB"  
+  config.disksize.size = "200GB"  
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
   # `vagrant box outdated`. This is not recommended.
@@ -60,7 +60,7 @@ Vagrant.configure("2") do |config|
   #   vb.gui = true
   #
   #   # Customize the amount of memory on the VM:
-      vb.memory = "32768"
+      vb.memory = "65536"
       vb.cpus = "16"
   end
   #
