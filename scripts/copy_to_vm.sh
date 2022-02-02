@@ -18,7 +18,7 @@ else
         key=$1
         case $key in
             -role) NODE_ROLE=$2
-                if [ $NODE_ROLE != master -a $NODE_ROLE != worker -a $NODE_ROLE != nfsserver]
+                if [ $NODE_ROLE != master -a $NODE_ROLE != worker -a $NODE_ROLE != nfsserver ]
                 then
                     echo "ERROR: illegal argument for key -role!"
                     usage
@@ -90,6 +90,7 @@ elif [ $NODE_ROLE == worker ]
 then
     vagrant scp ../scripts/setup_env.sh setup_env.sh
 elif [ $NODE_ROLE == nfsserver ]
+then
     vagrant scp ../scripts/setup_nfs_server.sh setup_nfs_server.sh
 else
     echo "ERROR: You have to provide the node type!"
