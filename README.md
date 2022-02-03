@@ -1,12 +1,12 @@
 # Kubernetes VM-based Serverless Cluster 
 
-The set of scripts configure a cluster of 4 Kubernetes (K8s) nodes: 1 master node (k8s-master) and 3 workers nodes (k8s-worker-node1, k8s-worker-node2, k8s-worker-node3). The current cluster configuration does not allow to run jobs on the master node, it runs only the kubernetes control plane.
+The set of scripts configure a cluster of 11 Kubernetes (K8s) nodes: 1 master node (k8s-master) and 10 workers nodes (k8s-worker-node1 to k8s-worker-node10). The current cluster configuration does not allow to run jobs on the master node, it runs only the kubernetes control plane.
 
-The cluster is built on 4 Ubuntu VMs, created with Vagrant, having the following characteristics:
+The cluster is built on 11 Ubuntu VMs, created with Vagrant, having the following characteristics:
 - master node: 32 GB of memory, 16 CPUs and 50GB of storage
 - worker node: 32 GB of memory, 8 CPUs and 50GB of storage
 
-Each cluster node VM is placed on a different physical node, and the VMs IPs have to be set properly accordingly with the specific available network. In the current configuration the IPs used are 10.0.26.205, 10.0.26.206, 10.0.26.207 and 10.0.26.208.<br />
+Each cluster node VM is placed on a different physical node, and the VMs IPs have to be set properly accordingly with the specific available network.<br />
 To change the VMs resources and the associated IPs, change the associated Vagrant files. 
 The hostnames and the related IPs have to be summerized in the cluster_ips.txt file.
 
@@ -86,13 +86,20 @@ Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
 To double-check all the workers nodes have joined correctly the cluster run the following command from the master VM:
 ```
 $ kubectl get nodes
-NAME               STATUS   ROLES    AGE   VERSION
-k8s-master         Ready    master   17m   v1.19.3
-k8s-worker-node1   Ready    <none>   10m   v1.19.3
-k8s-worker-node2   Ready    <none>   10m   v1.19.3
-k8s-worker-node3   Ready    <none>   10m   v1.19.3 
+NAME                STATUS   ROLES                  AGE   VERSION
+k8s-master          Ready    control-plane,master   10d   v1.19.3
+k8s-worker-node1    Ready    <none>                 10d   v1.19.3
+k8s-worker-node10   Ready    <none>                 68m   v1.19.3
+k8s-worker-node2    Ready    <none>                 10d   v1.19.3
+k8s-worker-node3    Ready    <none>                 10d   v1.19.3
+k8s-worker-node4    Ready    <none>                 69m   v1.19.3
+k8s-worker-node5    Ready    <none>                 69m   v1.19.3
+k8s-worker-node6    Ready    <none>                 69m   v1.19.3
+k8s-worker-node7    Ready    <none>                 69m   v1.19.3
+k8s-worker-node8    Ready    <none>                 69m   v1.19.3
+k8s-worker-node9    Ready    <none>                 69m   v1.19.3
 ```
-As shown, the 3 k8s worker nodes have actually joined the cluster. <br />
+As shown, the 10 k8s worker nodes have actually joined the cluster. <br />
 Optionally, the workers nodes role can be added by:
 ```
 kubectl label node 'node_name' node-role.kubernetes.io/worker=worker
@@ -101,11 +108,18 @@ where 'node_name' is the value reported in the first column of the previous comm
 Running again the command:
 ```
 $ kubectl get nodes
-NAME               STATUS   ROLES    AGE   VERSION
-k8s-master         Ready    master   17m   v1.19.3
-k8s-worker-node1   Ready    worker   10m   v1.19.3
-k8s-worker-node2   Ready    worker   10m   v1.19.3
-k8s-worker-node3   Ready    worker   10m   v1.19.3 
+NAME                STATUS   ROLES                  AGE   VERSION
+k8s-master          Ready    control-plane,master   10d   v1.19.3
+k8s-worker-node1    Ready    worker                 10d   v1.19.3
+k8s-worker-node10   Ready    worker                 68m   v1.19.3
+k8s-worker-node2    Ready    worker                 10d   v1.19.3
+k8s-worker-node3    Ready    worker                 10d   v1.19.3
+k8s-worker-node4    Ready    worker                 69m   v1.19.3
+k8s-worker-node5    Ready    worker                 69m   v1.19.3
+k8s-worker-node6    Ready    worker                 69m   v1.19.3
+k8s-worker-node7    Ready    worker                 69m   v1.19.3
+k8s-worker-node8    Ready    worker                 69m   v1.19.3
+k8s-worker-node9    Ready    worker                 69m   v1.19.3
 ```
 should show the label 'worker' under the 'ROLES' column instead of the previous '`<none>`'.
 
@@ -114,22 +128,56 @@ At this point, Docker and Kubernetes have been installed and setup, along with a
 The pods deployed on the cluster should be something similar to:
 ```
 $ kubectl get pods -o wide --all-namespaces 
-NAMESPACE     NAME                                     READY   STATUS    RESTARTS   AGE   IP                NODE               NOMINATED NODE   READINESS GATES
-kube-system   calico-kube-controllers-7d569d95-2hqkk   1/1     Running   0          26m   192.168.235.194   k8s-master         <none>           <none>
-kube-system   calico-node-8kpmm                        1/1     Running   0          26m   10.0.26.205       k8s-master         <none>           <none>
-kube-system   calico-node-c6b45                        1/1     Running   0          19m   10.0.26.208       k8s-worker-node3   <none>           <none>
-kube-system   calico-node-qpbj9                        1/1     Running   0          19m   10.0.26.206       k8s-worker-node1   <none>           <none>
-kube-system   calico-node-qqfqf                        1/1     Running   0          19m   10.0.26.207       k8s-worker-node2   <none>           <none> 
-kube-system   coredns-f9fd979d6-9kjzl                  1/1     Running   0          26m   192.168.235.193   k8s-master         <none>           <none>
-kube-system   coredns-f9fd979d6-jfk5r                  1/1     Running   0          26m   192.168.235.195   k8s-master         <none>           <none>
-kube-system   etcd-k8s-master                          1/1     Running   0          26m   10.0.26.205       k8s-master         <none>           <none>
-kube-system   kube-apiserver-k8s-master                1/1     Running   0          26m   10.0.26.205       k8s-master         <none>           <none>
-kube-system   kube-controller-manager-k8s-master       1/1     Running   0          26m   10.0.26.205       k8s-master         <none>           <none>
-kube-system   kube-proxy-5sd49                         1/1     Running   0          19m   10.0.26.208       k8s-worker-node3   <none>           <none>
-kube-system   kube-proxy-c8bgk                         1/1     Running   0          19m   10.0.26.207       k8s-worker-node2   <none>           <none>
-kube-system   kube-proxy-nrx65                         1/1     Running   0          26m   10.0.26.205       k8s-master         <none>           <none>
-kube-system   kube-proxy-xmsbd                         1/1     Running   0          19m   10.0.26.206       k8s-worker-node1   <none>           <none>
-kube-system   kube-scheduler-k8s-master                1/1     Running   0          26m   10.0.26.205       k8s-master         <none>           <none>
+NAMESPACE           NAME                                            READY       STATUS          RESTARTS        AGE     IP                  NODE                    NOMINATED NODE          READINESS GATES
+istio-system        istio-ingressgateway-84cc7c44cc-qs57j           1/1         Running         0               10d     192.168.50.199      k8s-worker-node1        <none>                  <none>
+istio-system        istiod-6b5df68ccb-vv69v                         1/1         Running         0               10d     192.168.50.198      k8s-worker-node1        <none>                  <none>
+kafka               kafka-0                                         1/1         Running         8               10d     192.168.198.193     k8s-worker-node3        <none>                  <none>
+kafka               kafka-1                                         1/1         Running         0               10d     192.168.50.200      k8s-worker-node1        <none>                  <none>
+kafka               kafka-2                                         1/1         Running         0               10d     192.168.219.72      k8s-worker-node2        <none>                  <none>
+kafka               kafka-zookeeper-0                               1/1         Running         0               10d     192.168.50.193      k8s-worker-node1        <none>                  <none>
+kafka               kafka-zookeeper-1                               1/1         Running         0               10d     192.168.198.198     k8s-worker-node3        <none>                  <none>
+kafka               kafka-zookeeper-2                               1/1         Running         0               10d     192.168.219.71      k8s-worker-node2        <none>                  <none>
+knative-eventing    eventing-controller-5484fbcc45-v9dxt            1/1         Running         0               10d     192.168.198.203     k8s-worker-node3        <none>                  <none>
+knative-eventing    eventing-webhook-867c7644b6-bxmqv               1/1         Running         0               10d     192.168.219.73      k8s-worker-node2        <none>                  <none>
+knative-serving     activator-66ccff99f8-fdj9z                      1/1         Running         0               10d     192.168.219.65      k8s-worker-node2        <none>                  <none>
+knative-serving     autoscaler-5dfd7d8bc6-4fqbr                     1/1         Running         0               10d     192.168.198.194     k8s-worker-node3        <none>                  <none>
+knative-serving     controller-79f444b898-d72sk                     1/1         Running         0               10d     192.168.50.194      k8s-worker-node1        <none>                  <none>
+knative-serving     domain-mapping-586dfb4787-fn2nn                 1/1         Running         0               10d     192.168.50.195      k8s-worker-node1        <none>                  <none>
+knative-serving     domainmapping-webhook-65dd85b5b8-z6xg2          1/1         Running         0               10d     192.168.219.66      k8s-worker-node2        <none>                  <none>
+knative-serving     net-istio-controller-987c8b9dd-8h8sx            1/1         Running         0               10d     192.168.198.201     k8s-worker-node3        <none>                  <none>
+knative-serving     net-istio-webhook-69fbbd8d49-c9lzb              1/1         Running         0               10d     192.168.198.202     k8s-worker-node3        <none>                  <none>
+knative-serving     webhook-854f698d87-xkqrw                        1/1         Running         0               10d     192.168.198.195     k8s-worker-node3        <none>                  <none>
+kube-system         calico-kube-controllers-6dc98bc7cb-msxv2        1/1         Running         0               10d     192.168.235.194     k8s-master              <none>                  <none>
+kube-system         calico-node-7rjrm                               1/1         Running         0               35m     10.0.26.213         k8s-worker-node4        <none>                  <none>
+kube-system         calico-node-8qjz2                               1/1         Running         0               10d     10.0.26.207         k8s-worker-node2        <none>                  <none>
+kube-system         calico-node-f9ht8                               1/1         Running         0               35m     10.0.26.214         k8s-worker-node5        <none>                  <none>
+kube-system         calico-node-gfxgf                               1/1         Running         0               34m     10.0.26.219         k8s-worker-node10       <none>                  <none>
+kube-system         calico-node-kv2fv                               1/1         Running         0               34m     10.0.26.217         k8s-worker-node8        <none>                  <none>  
+kube-system         calico-node-pmlfd                               1/1         Running         0               10d     10.0.26.205         k8s-master              <none>                  <none>
+kube-system         calico-node-rqjx7                               1/1         Running         0               10d     10.0.26.206         k8s-worker-node1        <none>                  <none>
+kube-system         calico-node-rrl2k                               1/1         Running         0               10d     10.0.26.208         k8s-worker-node3        <none>                  <none>
+kube-system         calico-node-v9jjr                               1/1         Running         0               34m     10.0.26.216         k8s-worker-node7        <none>                  <none>
+kube-system         calico-node-wq6w8                               1/1         Running         0               34m     10.0.26.218         k8s-worker-node9        <none>                  <none>
+kube-system         calico-node-zbf6h                               1/1         Running         0               34m     10.0.26.215         k8s-worker-node6        <none>                  <none>
+kube-system         coredns-74ff55c5b-qq5bf                         1/1         Running         0               8d      192.168.198.215     k8s-worker-node3        <none>                  <none>
+kube-system         coredns-74ff55c5b-xth9f                         1/1         Running         0               8d      192.168.50.255      k8s-worker-node1        <none>                  <none>
+kube-system         etcd-k8s-master                                 1/1         Running         0               8d      10.0.26.205         k8s-master              <none>                  <none>
+kube-system         kube-apiserver-k8s-master                       1/1         Running         0               8d      10.0.26.205         k8s-master              <none>                  <none>
+kube-system         kube-controller-manager-k8s-master              1/1         Running         0               8d      10.0.26.205         k8s-master              <none>                  <none>
+kube-system         kube-proxy-7vm8h                                1/1         Running         0               34m     10.0.26.216         k8s-worker-node7        <none>                  <none>
+kube-system         kube-proxy-9gmrg                                1/1         Running         0               34m     10.0.26.217         k8s-worker-node8        <none>                  <none>
+kube-system         kube-proxy-bn4nl                                1/1         Running         0               8d      10.0.26.208         k8s-worker-node3        <none>                  <none>
+kube-system         kube-proxy-dt2tg                                1/1         Running         0               8d      10.0.26.206         k8s-worker-node1        <none>                  <none>
+kube-system         kube-proxy-hgc74                                1/1         Running         0               35m     10.0.26.213         k8s-worker-node4        <none>                  <none>
+kube-system         kube-proxy-hzhd4                                1/1         Running         0               8d      10.0.26.207         k8s-worker-node2        <none>                  <none>
+kube-system         kube-proxy-kbhbm                                1/1         Running         0               34m     10.0.26.219         k8s-worker-node10       <none>                  <none>
+kube-system         kube-proxy-scm7j                                1/1         Running         0               35m     10.0.26.214         k8s-worker-node5        <none>                  <none>
+kube-system         kube-proxy-t9bqd                                1/1         Running         0               34m     10.0.26.218         k8s-worker-node9        <none>                  <none>
+kube-system         kube-proxy-wn2hr                                1/1         Running         0               34m     10.0.26.215         k8s-worker-node6        <none>                  <none>
+kube-system         kube-proxy-z2l9l                                1/1         Running         0               8d      10.0.26.205         k8s-master              <none>                  <none>
+kube-system         kube-scheduler-k8s-master                       1/1         Running         0               8d      10.0.26.205         k8s-master              <none>                  <none>
+tekton-pipelines    tekton-pipelines-controller-6675bc4ff6-z4tf7    1/1         Running         0               49m     192.168.219.95      k8s-worker-node2        <none>                  <none>
+tekton-pipelines    tekton-pipelines-webhook-6f449dbcbb-4wfx9       1/1         Running         0               88m     192.168.198.218     k8s-worker-node3        <none>                  <none>
 ```
 
 ### Knative 
