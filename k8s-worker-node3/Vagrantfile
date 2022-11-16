@@ -44,7 +44,7 @@ Vagrant.configure("2") do |config|
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
   # your network.
-  config.vm.network "public_network", ip: "10.0.26.208"
+  config.vm.network "public_network", ip: "10.0.26.203"
   # Share an additional folder to the guest VM. The first argument is
   # the path on the host to the actual folder. The second argument is
   # the path on the guest to mount the folder. And the optional third
@@ -60,8 +60,8 @@ Vagrant.configure("2") do |config|
   #   vb.gui = true
   #
   #   # Customize the amount of memory on the VM:
-      vb.memory = "131072"
-      vb.cpus = "16"
+      vb.memory = "122880"
+      vb.cpus = "18"
   end
   #
   # View the documentation for the provider you are using for more
