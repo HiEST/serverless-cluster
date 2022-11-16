@@ -122,7 +122,7 @@ systemctl enable docker
 apt-get update
 
 # Setup NFS
-apt-get install nfs-common
+apt-get install -y nfs-common
 
 # Set up Kubernetes environment
 apt-get install -y apt-transport-https curl
