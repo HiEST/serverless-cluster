@@ -153,9 +153,8 @@ then
     chown vagrant:vagrant $HOME/.kube/config
     
     # Install the CALICO pod network
-    curl https://docs.projectcalico.org/manifests/calico.yaml -O
-    kubectl apply -f calico.yaml
-    rm calico.yaml
+    kubectl create -f https://projectcalico.docs.tigera.io/archive/v3.22/manifests/tigera-operator.yaml
+    kubectl create -f https://projectcalico.docs.tigera.io/archive/v3.22/manifests/custom-resources.yaml
 
     # Set up ssh connections with worker nodes
     ./setup_ssh.sh
