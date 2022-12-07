@@ -161,7 +161,7 @@ then
     ./setup_ssh.sh
 
     # Send join_cluster.sh script to worker nodes
-    workers_ips=$(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | sed -n -e '2,4p')
+    workers_ips=$(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | awk 'NR>1' )
     for ip in $workers_ips; do
         scp join_cluster.sh root@$ip:/home/vagrant
     done

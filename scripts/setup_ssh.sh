@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Extracting workers ips from input file
-workers_ips=$(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | sed -n -e '2,4p')
+workers_ips=$(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | awk 'NR>1')
 
 # Generate a pair of ssh keys
 ssh-keygen -t rsa -f /root/.ssh/id_rsa -q -N ""
