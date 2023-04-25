@@ -95,53 +95,66 @@ fi
 # Update repository
 apt-get update
 
-# Install Docker
-apt-get install -y apt-transport-https ca-certificates curl software-properties-common gnupg2
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-apt-get update && apt-get install -y \
-    containerd.io=1.2.13-2 \
-    docker-ce=5:19.03.11~3-0~ubuntu-$(lsb_release -cs) \
-    docker-ce-cli=5:19.03.11~3-0~ubuntu-$(lsb_release -cs)
-cat > /etc/docker/daemon.json <<EOF
-{
-    "exec-opts": ["native.cgroupdriver=systemd"],
-    "log-driver": "json-file",
-    "log-opts": {
-        "max-size": "100m"
-    },
-    "storage-driver": "overlay2"
-}
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt update -y
+sudo apt remove kubelet kubeadm kubectl
+sudo apt -y install vim git curl wget kubelet=1.26.0-00 kubeadm=1.26.0-00 kubectl=1.26.0-00
+sudo apt-mark hold kubelet kubeadm kubectl
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+sudo tee /etc/sysctl.d/kubernetes.conf<<EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
 EOF
-mkdir -p /etc/systemd/system/docker.service.d
-systemctl daemon-reload
-systemctl restart docker
-systemctl enable docker
+sysctl --system
 
-# Update repository
-apt-get update
-
-# Setup NFS
-apt-get install -y nfs-common
-
-# Set up Kubernetes environment
-apt-get install -y apt-transport-https curl
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
-deb http://apt.kubernetes.io/ kubernetes-xenial main
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+overlay
+br_netfilter
 EOF
 
-# Update repository
-apt-get update
+sudo modprobe overlay
+sudo modprobe br_netfilter
 
-# Install kubeadm, Kubelet And Kubectl 
-apt-get install -y kubelet=1.19.3-00 kubeadm=1.19.3-00 kubectl=1.19.3-00
-apt-mark hold kubelet kubeadm kubectl
+# Setup required sysctl params, these persist across reboots.
+cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+
+# Apply sysctl params without reboot
+sudo sysctl --system
+
+#Install and configure containerd 
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt remove -y containerd.io 
+sudo apt update -y
+wget https://github.com/containerd/containerd/releases/download/v1.6.16/containerd-1.6.16-linux-amd64.tar.gz -P /tmp/
+tar Cxzvf /usr/local /tmp/containerd-1.6.16-linux-amd64.tar.gz
+wget https://raw.githubusercontent.com/containerd/containerd/main/containerd.service -P /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now containerd
+wget https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64 -P /tmp/
+sudo install -m 755 /tmp/runc.amd64 /usr/local/sbin/runc
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml
+TODO: modify SystemCgroups to true
+
+#Start containerd
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+
+sudo kubeadm config images pull --image-repository=registry.k8s.io --cri-socket unix:///run/containerd/containerd.sock --kubernetes-version v1.26.0
 
 if [[ $NODE_TYPE == master ]]
 then
     # Init k8s cluster
-	kubeadm init --apiserver-advertise-address=$IP --pod-network-cidr=192.168.0.0/16 > output.txt
+    sudo kubeadm init --pod-network-cidr=192.168.0.0/16 ---kubernetes-version=v1.26.0 --node-name k8s-master  > output.txt
     start_line=`awk '/kubeadm join/{ print NR; exit }' output.txt`
 	end_line=$((start_line + 1))
     awk -v s="$start_line" -v e="$end_line" 'NR >=s && NR <=e {print $0}' output.txt > join_cluster.sh
@@ -151,10 +164,14 @@ then
     chown vagrant:vagrant $HOME/.kube
     cp -i /etc/kubernetes/admin.conf $HOME/.kube/config 
     chown vagrant:vagrant $HOME/.kube/config
-    
+    export KUBECONFIG=$HOME/.kube/config
+
     # Install the CALICO pod network
-    kubectl create -f https://projectcalico.docs.tigera.io/archive/v3.22/manifests/tigera-operator.yaml
-    kubectl create -f https://projectcalico.docs.tigera.io/archive/v3.22/manifests/custom-resources.yaml
+    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
+    wget https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/custom-resources.yaml
+    kubectl apply -f custom-resources.yaml
+   # curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/calico.yaml -O
+   # kubectl apply -f calico.yaml
 
     # Set up ssh connections with worker nodes
     ./setup_ssh.sh
