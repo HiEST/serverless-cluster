@@ -153,15 +153,14 @@ then
     chown vagrant:vagrant $HOME/.kube/config
     
     # Install the CALICO pod network
-    curl https://docs.projectcalico.org/manifests/calico.yaml -O
-    kubectl apply -f calico.yaml
-    rm calico.yaml
+    kubectl create -f https://projectcalico.docs.tigera.io/archive/v3.22/manifests/tigera-operator.yaml
+    kubectl create -f https://projectcalico.docs.tigera.io/archive/v3.22/manifests/custom-resources.yaml
 
     # Set up ssh connections with worker nodes
     ./setup_ssh.sh
 
     # Send join_cluster.sh script to worker nodes
-    workers_ips=$(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | sed -n -e '2,4p')
+    workers_ips=$(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | awk 'NR>1' )
     for ip in $workers_ips; do
         scp join_cluster.sh root@$ip:/home/vagrant
     done
