@@ -143,18 +143,16 @@ wget https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64 
 sudo install -m 755 /tmp/runc.amd64 /usr/local/sbin/runc
 sudo mkdir -p /etc/containerd
 containerd config default | sudo tee /etc/containerd/config.toml
-TODO: modify SystemCgroups to true
+sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
 
 #Start containerd
 sudo systemctl restart containerd
 sudo systemctl enable containerd
 
-sudo kubeadm config images pull --image-repository=registry.k8s.io --cri-socket unix:///run/containerd/containerd.sock --kubernetes-version v1.26.0
-
 if [[ $NODE_TYPE == master ]]
 then
     # Init k8s cluster
-    sudo kubeadm init --pod-network-cidr=192.168.0.0/16 ---kubernetes-version=v1.26.0 --node-name k8s-master  > output.txt
+    sudo kubeadm init --pod-network-cidr=192.168.0.0/16 --kubernetes-version=v1.26.0 --control-plane-endpoint $IP --node-name k8s-master  > output.txt
     start_line=`awk '/kubeadm join/{ print NR; exit }' output.txt`
 	end_line=$((start_line + 1))
     awk -v s="$start_line" -v e="$end_line" 'NR >=s && NR <=e {print $0}' output.txt > join_cluster.sh
