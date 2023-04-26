@@ -167,11 +167,20 @@ then
     export KUBECONFIG=$HOME/.kube/config
 
     # Install the CALICO pod network
-    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
-    wget https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/custom-resources.yaml
-    kubectl apply -f custom-resources.yaml
-   # curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/calico.yaml -O
-   # kubectl apply -f calico.yaml
+    {
+    echo "kind: ConfigMap"
+    echo "apiVersion: v1"
+    echo "metadata:"
+    echo "  name: kubernetes-services-endpoint"
+    echo "  namespace: kube-system"
+    echo "data:"
+    echo "  KUBERNETES_SERVICE_HOST: $IP"
+    echo "  KUBERNETES_SERVICE_PORT: 6443"
+    } >> calico_config_map.yaml
+    kubectl apply -f calico_config_map.yaml
+
+    curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml -O
+    kubectl apply -f calico.yaml
 
     # Set up ssh connections with worker nodes
     ./setup_ssh.sh
