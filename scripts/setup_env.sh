@@ -92,43 +92,42 @@ else
     apt-get install -y sshpass
 fi
 
-# Install docker 
-apt install apt-transport-https ca-certificates curl software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-apt update
+# Install docker
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
 apt-cache policy docker-ce
-apt install docker-ce
-
-# Give docker permissions to user
-newgrp docker 
-gpasswd -a $USER docker
+sudo apt install docker-ce
+newgrp docker
+sudo gpasswd -a $USER docker
 
 # Update repository
 apt-get update
 
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
-apt update -y
-apt -y install vim git curl wget kubelet=1.26.0-00 kubeadm=1.26.0-00 kubectl=1.26.0-00
-apt-mark hold kubelet kubeadm kubectl
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt update -y
+sudo apt remove kubelet kubeadm kubectl
+sudo apt -y install vim git curl wget kubelet=1.26.0-00 kubeadm=1.26.0-00 kubectl=1.26.0-00
+sudo apt-mark hold kubelet kubeadm kubectl
 
-modprobe overlay
-modprobe br_netfilter
-tee /etc/sysctl.d/kubernetes.conf<<EOF
+sudo modprobe overlay
+sudo modprobe br_netfilter
+sudo tee /etc/sysctl.d/kubernetes.conf<<EOF
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 net.ipv4.ip_forward = 1
 EOF
 sysctl --system
 
-cat <<EOF | tee /etc/modules-load.d/containerd.conf
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
 overlay
 br_netfilter
 EOF
 
-modprobe overlay
-modprobe br_netfilter
+sudo modprobe overlay
+sudo modprobe br_netfilter
 
 # Setup required sysctl params, these persist across reboots.
 cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
@@ -138,32 +137,39 @@ net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 
 # Apply sysctl params without reboot
-sysctl --system
+sudo sysctl --system
+
+# Install docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
 #Install and configure containerd 
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-apt remove -y containerd.io 
-apt update -y
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt remove -y containerd.io 
+sudo apt update -y
 wget https://github.com/containerd/containerd/releases/download/v1.6.16/containerd-1.6.16-linux-amd64.tar.gz -P /tmp/
 tar Cxzvf /usr/local /tmp/containerd-1.6.16-linux-amd64.tar.gz
 wget https://raw.githubusercontent.com/containerd/containerd/main/containerd.service -P /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now containerd
+sudo systemctl daemon-reload
+sudo systemctl enable --now containerd
 wget https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64 -P /tmp/
-install -m 755 /tmp/runc.amd64 /usr/local/sbin/runc
-mkdir -p /etc/containerd
-containerd config default | tee /etc/containerd/config.toml
+sudo install -m 755 /tmp/runc.amd64 /usr/local/sbin/runc
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml
 sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
 
 #Start containerd
-systemctl restart containerd
-systemctl enable containerd
+sudo systemctl restart containerd
+sudo systemctl enable containerd
 
 if [[ $NODE_TYPE == master ]]
 then
     # Init k8s cluster
-    kubeadm init --pod-network-cidr=192.168.0.0/16 --kubernetes-version=v1.26.0 --control-plane-endpoint $IP --node-name k8s-master  > output.txt
+    sudo kubeadm init --pod-network-cidr=192.168.0.0/16 \
+        --kubernetes-version=v1.26.0 \
+        --control-plane-endpoint $IP \
+        --apiserver-advertise-address $IP \
+        --node-name k8s-master  > output.txt
     start_line=`awk '/kubeadm join/{ print NR; exit }' output.txt`
 	end_line=$((start_line + 1))
     awk -v s="$start_line" -v e="$end_line" 'NR >=s && NR <=e {print $0}' output.txt > join_cluster.sh
@@ -176,31 +182,21 @@ then
     export KUBECONFIG=$HOME/.kube/config
 
     # Install the CALICO pod network
-    {
-    echo "kind: ConfigMap"
-    echo "apiVersion: v1"
-    echo "metadata:"
-    echo "  name: kubernetes-services-endpoint"
-    echo "  namespace: kube-system"
-    echo "data:"
-    echo "  KUBERNETES_SERVICE_HOST: $IP"
-    echo "  KUBERNETES_SERVICE_PORT: 6443"
-    } >> calico_config_map.yaml
-    kubectl apply -f calico_config_map.yaml
-    rm calico_config_map.yaml
-
+    #kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
+    #wget https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/custom-resources.yaml
+    #kubectl apply -f custom-resources.yaml
     curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml -O
     kubectl apply -f calico.yaml
-    rm calico.yaml
 
     # Set up ssh connections with worker nodes
     ./setup_ssh.sh
 
-    # Send join_cluster.sh script to worker nodes and join them to the cluster
+    # Send join_cluster.sh script to worker nodes
     workers_ips=$(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | awk 'NR>1' )
     for ip in $workers_ips; do
         scp join_cluster.sh root@$ip:/home/vagrant
         ssh "$ip" "cd /home/vagrant && ./join_cluster.sh"
     done
+
 fi
 
