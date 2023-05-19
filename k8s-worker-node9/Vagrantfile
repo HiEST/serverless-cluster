@@ -12,12 +12,12 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
-  config.vm.box = "bento/ubuntu-22.04"
-  
+  config.vm.box = "bento/ubuntu-22.04" 
+ 
   # Name the machine
-  config.vm.define :worker4_vm do |t|
+  config.vm.define :worker9_vm do |t|
   end
-  
+
   # Add disk space
   config.disksize.size = "400GB"
   
@@ -44,7 +44,8 @@ Vagrant.configure("2") do |config|
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
   # your network.
-  config.vm.network "public_network", ip: "10.0.26.204"
+  config.vm.network "public_network", ip: "10.0.26.209"
+
   # Share an additional folder to the guest VM. The first argument is
   # the path on the host to the actual folder. The second argument is
   # the path on the guest to mount the folder. And the optional third
@@ -61,7 +62,7 @@ Vagrant.configure("2") do |config|
   #
   #   # Customize the amount of memory on the VM:
       vb.memory = "122880"
-      vb.cpus = "18"
+      vb.cpus = "32"
   end
   #
   # View the documentation for the provider you are using for more

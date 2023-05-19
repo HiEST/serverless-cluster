@@ -19,7 +19,7 @@ Vagrant.configure("2") do |config|
   end
 
   # Add disk space
-  config.disksize.size = "200GB"
+  config.disksize.size = "400GB"
   
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
