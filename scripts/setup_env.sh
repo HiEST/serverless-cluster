@@ -92,25 +92,24 @@ else
     apt-get install -y sshpass
 fi
 
-# Install docker
-sudo apt install apt-transport-https ca-certificates curl software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt update
-apt-cache policy docker-ce
-sudo apt install docker-ce
+# Install crictl
+wget https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.26.0/crictl-v1.26.0-linux-amd64.tar.gz
+sudo tar zxvf crictl-v1.26.0-linux-amd64.tar.gz -C /usr/local/bin
+sudo crictl config --set runtime-endpoint=unix:///run/containerd/containerd.sock --set image-endpoint=unix:///run/containerd/containerd.sock
+rm crictl-v1.26.0-linux-amd64.tar.gz
+
 newgrp docker
-sudo gpasswd -a $USER docker
+gpasswd -a $USER docker
 
 # Update repository
 apt-get update
 
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-sudo apt update -y
-sudo apt remove kubelet kubeadm kubectl
-sudo apt -y install vim git curl wget kubelet=1.26.0-00 kubeadm=1.26.0-00 kubectl=1.26.0-00
-sudo apt-mark hold kubelet kubeadm kubectl
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
+apt update -y
+apt remove kubelet kubeadm kubectl
+apt -y install vim git curl wget kubelet=1.26.0-00 kubeadm=1.26.0-00 kubectl=1.26.0-00
+apt-mark hold kubelet kubeadm kubectl
 
 sudo modprobe overlay
 sudo modprobe br_netfilter
@@ -194,6 +193,8 @@ then
     # Send join_cluster.sh script to worker nodes
     workers_ips=$(grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' cluster_ips.txt | awk 'NR>1' )
     for ip in $workers_ips; do
+        ssh "$ip" "timedatectl set-timezone Europe/Madrid && timedatectl set-ntp true && systemctl restart systemd-timesyncd"
+        ssh "$ip" "cd /home/vagrant && kubeadm reset && rm -rf  /etc/cni/net.d"
         scp join_cluster.sh root@$ip:/home/vagrant
         ssh "$ip" "cd /home/vagrant && ./join_cluster.sh"
     done
