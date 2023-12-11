@@ -76,6 +76,7 @@ then
     vagrant scp ../storage_objs/persistentVolume.yaml storage_objs/persistentVolume.yaml
     vagrant scp ../storage_objs/persistentVolumeTekton.yaml storage_objs/persistentVolumeTekton.yaml
     vagrant scp ../storage_objs/storageClass.yaml storage_objs/storageClass.yaml
+    vagrant scp calico.yaml calico.yaml
     if [ $TEST_GIVEN ]
     then
         if [ $TEST_TYPE == local_disk ] 

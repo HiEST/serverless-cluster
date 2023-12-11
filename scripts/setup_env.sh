@@ -138,8 +138,15 @@ EOF
 # Apply sysctl params without reboot
 sudo sysctl --system
 
+# Install crictl 
+wget https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.26.0/crictl-v1.26.0-linux-amd64.tar.gz
+sudo tar zxvf crictl-v1.26.0-linux-amd64.tar.gz -C /usr/local/bin
+sudo crictl config --set runtime-endpoint=unix:///run/containerd/containerd.sock --set image-endpoint=unix:///run/containerd/containerd.sock
+
 # Install docker
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+newgrp docker
+sudo gpasswd -a $USER docker
 
 #Install and configure containerd 
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
@@ -181,10 +188,6 @@ then
     export KUBECONFIG=$HOME/.kube/config
 
     # Install the CALICO pod network
-    #kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
-    #wget https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/custom-resources.yaml
-    #kubectl apply -f custom-resources.yaml
-    curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml -O
     kubectl apply -f calico.yaml
 
     # Set up ssh connections with worker nodes
